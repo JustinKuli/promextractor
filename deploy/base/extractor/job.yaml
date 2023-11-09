@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: extractor
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        runAsNonRoot: true
+        fsGroup: 1000
+      containers:
+        - name: promextractor
+          command: ["/app/promextractor"]
+          image: promextractor:latest
+          env:
+            - name: INPUT_TSDB_PATH
+              value: "/input/prometheus"
+            - name: FILTER_LABEL_NAME
+              value: "job"
+            - name: FILTER_LABEL_EXPRESSION
+              value: ".*foo.*"
+            - name: EXISTING_TSDB_PATH
+              value: "/output/prometheus"
+          volumeMounts:
+            - name: input
+              mountPath: /input
+            - name: output
+              mountPath: /output
+      volumes:
+        # Details for each volume must be set in an overlay
+        - name: input
+        - name: output
+      restartPolicy: Never

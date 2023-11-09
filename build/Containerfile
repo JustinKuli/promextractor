@@ -1,0 +1,38 @@
+############ BUILDER STAGE ############
+FROM golang:latest AS builder
+#######################################
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+
+# Build the Go binary
+RUN make build
+
+############ GRAB PROMTOOL ############
+FROM quay.io/prometheus/prometheus:v2.47.2 AS prom
+#######################################
+
+############ RUNTIME STAGE ############
+FROM quay.io/prometheus/busybox:glibc
+#######################################
+
+USER 1000
+ENV PATH="${PATH}:/app"
+
+# Copy the binary from the build stage
+COPY --from=builder /app/promextractor /app/promextractor
+
+# Copy promtool from the community image
+COPY --from=prom /bin/promtool /app/promtool
+
+# Command to run the application
+CMD ["/app/promextractor"]
+
+# Keep static labels here, ones that may change should be in the Makefile
+LABEL org.opencontainers.image.url="github.com/JustinKuli/promextractor"
+LABEL org.opencontainers.image.documentation="github.com/JustinKuli/promextractor"
+LABEL org.opencontainers.image.source="github.com/JustinKuli/promextractor"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.title="promextractor"

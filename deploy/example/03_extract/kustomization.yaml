@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+commonLabels:
+  app.kubernetes.io/part-of: promextractor
+resources:
+  - ../00_normal
+  - ../../with-pvcs/extractor
+patches:
+  - patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 0
+    target:
+      # Note: this targets both prometheus deployments!
+      group: apps
+      version: v1
+      kind: Deployment
+  - patch: |-
+      apiVersion: batch/v1
+      kind: Job
+      metadata:
+        name: extractor
+      spec:
+        template:
+          spec:
+            containers:
+              - name: promextractor
+                env:
+                  - name: FILTER_LABEL_NAME
+                    value: "__name__"
+                  - name: FILTER_LABEL_EXPRESSION
+                    value: ".*my-custom-metric.*"
+images:
+  - name: promextractor
+    newName: quay.io/justinkuli/promextractor
+    newTag: v0.1.0
